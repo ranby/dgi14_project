@@ -270,8 +270,44 @@ void SetupLenses() {
 }
 
 bool IntersectsLense(vec3 start, vec3 dir, vec3& intersection) {
-	
-	//TODO
+    float square = glm::dot(l,(o-c))^2 - glm::length(o-c)^2 + r^2;
+    
+    float d1,d2;
+    
+    if(square==0){
+        
+        d1 = -glm::dot(l,(o-c));
+        d2 = INT_MAX;
+        
+    }
+    else if(square>0){
+        
+        d1 = -glm::dot(l,(o-c)) + sqrt( square );
+        d2 = -glm::dot(l,(o-c)) - sqrt( square );
+    }
+    else {
+        
+        d1 = INT_MAX;
+        d2 = INT_MAX;
+        
+    }
+    
+    vec3 intersection1 = o + d1*l;
+    vec3 intersection2 = o + d2*l;
+    
+    
+    if(d1==INT_MAX){
+        return false;
+    }else{
+        if (dot((intersection1-p),N)>0){
+            intersection = intersection1;
+            return true;
+        }
+        else if ((d2==INT_MAX)&&(dot((intersection2-p),N)>0)){
+            intersection = intersection2;
+            return true;
+        }
+    }
 }
 
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, vec3& lensePointOut, vec3& dirOut) {
