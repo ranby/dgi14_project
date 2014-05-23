@@ -9,6 +9,25 @@ using glm::vec3;
 using glm::mat3;
 
 // ----------------------------------------------------------------------------
+// STRUCTS
+
+struct Intersection
+{
+	vec3 position;
+	float distance;
+	int triangleIndex;
+};
+
+struct Lense
+{
+	vec3 center;
+	float radius;
+	vec3 normal;
+	float frontFocalLength;
+	float backFocalLength;
+};
+
+// ----------------------------------------------------------------------------
 // GLOBAL VARIABLES
 
 const int SCREEN_WIDTH = 100;
@@ -27,16 +46,7 @@ vec3 lightPos(0, -0.5, -0.7);
 vec3 lightColor = 14.f * vec3(1, 1, 1);
 vec3 indirectLight = 0.5f*vec3(1, 1, 1);
 
-
-// ----------------------------------------------------------------------------
-// STRUCTS
-
-struct Intersection
-{
-	vec3 position;
-	float distance;
-	int triangleIndex;
-};
+vector<Lense> lenses;
 
 
 // ----------------------------------------------------------------------------
@@ -49,7 +59,8 @@ bool ClosestIntersection(vec3 start, vec3 dir, const vector<Triangle>& triangles
 bool Intersects(vec3 x);
 vec3 DirectLight(const Intersection& i);
 
-vec3 IntersectsLense(vec3 start, vec3 dir);
+void SetupLenses();
+bool IntersectsLense(vec3 start, vec3 dir, vec3& intersection);
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, vec3& lensePointOut, vec3& dirOut);
 void calculateReflection(vec3 dirIn, vec3 lensePoint, vec3& dirOut);
 
@@ -65,6 +76,7 @@ int main(int argc, char* argv[])
 	t = SDL_GetTicks();	// Set start value for timer.
 
 	LoadTestModel(triangles);
+	SetupLenses();
 
 	while (NoQuitMessageSDL())
 	{
@@ -247,8 +259,18 @@ vec3 DirectLight(const Intersection& i){
 	return illumination;
 }
 
+void SetupLenses() {
+	Lense lense;
+	lense.center = vec3(0, 0, 0);
+	lense.radius = 2.f;
+	lense.normal = vec3(0, 0, 1);
+	lense.frontFocalLength = 3.5f;
+	lense.backFocalLength = 3.5f;
+	lenses[0] = lense;
+}
 
-vec3 IntersectsLense(vec3 start, vec3 dir) {
+bool IntersectsLense(vec3 start, vec3 dir, vec3& intersection) {
+	
 	//TODO
 }
 
