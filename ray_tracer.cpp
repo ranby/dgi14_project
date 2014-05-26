@@ -60,7 +60,7 @@ bool Intersects(vec3 x);
 vec3 DirectLight(const Intersection& i);
 
 void SetupLenses();
-bool IntersectsLense(vec3 start, vec3 dir, vec3& intersection);
+bool IntersectsLense(vec3 start, vec3 dir, float focalLength, vec3& intersection);
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, vec3& lensePointOut, vec3& dirOut);
 void calculateReflection(vec3 dirIn, vec3 lensePoint, vec3& dirOut);
 
@@ -269,7 +269,7 @@ void SetupLenses() {
 	lenses[0] = lense;
 }
 
-bool IntersectsLense(vec3 start, vec3 dir, vec3& intersection) {
+bool IntersectsLense(vec3 start, vec3 dir, float focalLength, vec3& intersection) {
 	Lense lense = lenses[0];
 
 	float dotProd = glm::dot(dir, (start - lense.center));
@@ -301,7 +301,7 @@ bool IntersectsLense(vec3 start, vec3 dir, vec3& intersection) {
 		return false;
 	}
 	else{
-		if (glm::dot((intersection1 - lense.center), lense.normal) > 0){
+		if (glm::dot((intersection1 - lense.center), lense.normal*focallength) > 0){
 			intersection = intersection1;
 			return true;
 		}
