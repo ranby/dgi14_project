@@ -1,5 +1,5 @@
 #include <iostream>
-#include <glm/glm.hpp>
+#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
 #include <SDL.h>
 #include "SDLauxiliary.h"
 #include "TestModel.h"
@@ -37,8 +37,8 @@ struct LenseIntersection
 // ----------------------------------------------------------------------------
 // GLOBAL VARIABLES
 
-const int SCREEN_WIDTH = 100;
-const int SCREEN_HEIGHT = 100;
+const int SCREEN_WIDTH = 500;
+const int SCREEN_HEIGHT = 500;
 SDL_Surface* screen;
 int t;
 float PI = 3.14159f;
@@ -63,7 +63,7 @@ void Update();
 void CalculateRotation();
 void Draw();
 bool ClosestIntersection(vec3 start, vec3 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
-bool GetIntersectedTriangleColor(vec3 startPosition, vec3 dir, vec3& intersectionColor);
+bool GetIntersectedTriangleColor(vec3 startPosition, vec3 dir, vec3& intersectionColor, Intersection& isn);
 bool Intersects(vec3 x);
 vec3 DirectLight(const Intersection& i);
 
@@ -78,6 +78,14 @@ void calculateReflection(vec3 dirIn, vec3 lensePoint, Lense lense, vec3& dirOut)
 // ----------------------------------------------------------------------------
 // CODE
 
+void noop(int x, int y){
+    if(x==250){
+        if(y==250){
+            int i = 0;
+        }
+    }
+}
+
 int main(int argc, char* argv[])
 {
 	yaw = 0;
@@ -85,7 +93,8 @@ int main(int argc, char* argv[])
 	t = SDL_GetTicks();	// Set start value for timer.
 
 	LoadTestModel(triangles);
-	//SetupLenses();
+    
+	SetupLenses();
 
 	while (NoQuitMessageSDL())
 	{
@@ -161,11 +170,14 @@ void Draw()
 	if (SDL_MUSTLOCK(screen))
 		SDL_LockSurface(screen);
 
-	Intersection isn;
+	Intersection isn1;
+    Intersection isn2;
 	for (int y = 0; y<SCREEN_HEIGHT; ++y)
 	{
 		for (int x = 0; x<SCREEN_WIDTH; ++x)
 		{
+            noop(x,y);
+            
 			vec3 triangleColor(0, 0, 0);
 			vec3 d(x - (SCREEN_WIDTH / 2), y - (SCREEN_HEIGHT / 2), focalLength);
 			d = d*R;
@@ -178,14 +190,14 @@ void Draw()
 				vec3 dirOut;
 				calculateRefraction(d, lenseIntersection.position, lenses[lenseIntersection.lenseIndex], pointOut, dirOut);
 
-				GetIntersectedTriangleColor(pointOut, dirOut, lenseColor);				
+				GetIntersectedTriangleColor(pointOut, dirOut, lenseColor, isn1);
 			}
 			float lenseDistance = glm::length(lenseIntersection.position - cameraPos);
 
-			GetIntersectedTriangleColor(cameraPos, d, triangleColor);
+			GetIntersectedTriangleColor(cameraPos, d, triangleColor, isn2);
 			
 			vec3 color;
-			if (lenseDistance < isn.distance) {
+			if (lenseDistance < isn2.distance) {
 				color = lenseColor;
 			} else {
 				color = triangleColor;
@@ -200,8 +212,7 @@ void Draw()
 	SDL_UpdateRect(screen, 0, 0, 0, 0);
 }
 
-bool GetIntersectedTriangleColor(vec3 startPosition, vec3 dir, vec3& intersectionColor) {
-	Intersection isn;
+bool GetIntersectedTriangleColor(vec3 startPosition, vec3 dir, vec3& intersectionColor, Intersection& isn) {
 	if (ClosestIntersection(startPosition, dir, triangles, isn)){
 		vec3 illumination = DirectLight(isn);
 		intersectionColor = triangles[isn.triangleIndex].color*(illumination + indirectLight);
@@ -273,6 +284,7 @@ bool Intersects(vec3 x)
 
 
 vec3 DirectLight(const Intersection& i){
+    
 	vec3 rVector = lightPos - i.position;
 	Triangle triangle = triangles[i.triangleIndex];
 	vec3 normal = triangle.normal;
@@ -294,6 +306,8 @@ vec3 DirectLight(const Intersection& i){
 }
 
 void SetupLenses() {
+    lenses  = vector<Lense>(2);
+    
 	Lense lense;
 	lense.center = vec3(0, 0, -1.8f);
 	lense.radius = 0.3f;
@@ -355,6 +369,7 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 				return true;
 			}
 		}
+        
 	}
 }
 
