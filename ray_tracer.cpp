@@ -426,7 +426,8 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	vec3 normalVector = glm::normalize(pointIn - focalPoint);
 
 	//calculating the angle between incoming ray and previous found normal
-	dirIn + 0.00000001f;
+	dirIn += 0.00000001f;
+	normalVector += 0.00000001f;
 	float pitch = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
 	float yaw = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
 
