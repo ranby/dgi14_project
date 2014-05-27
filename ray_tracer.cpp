@@ -1,5 +1,6 @@
 #include <iostream>
-#include <glm/glm.hpp>
+//#include <glm/glm.hpp>
+#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
 #include <SDL.h>
 #include "SDLauxiliary.h"
 #include "TestModel.h"
