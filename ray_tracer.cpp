@@ -63,12 +63,14 @@ void Update();
 void CalculateRotation();
 void Draw();
 bool ClosestIntersection(vec3 start, vec3 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
+bool GetIntersectedTriangleColor(vec3 startPosition, vec3 dir, vec3& intersectionColor);
 bool Intersects(vec3 x);
 vec3 DirectLight(const Intersection& i);
 
 void SetupLenses();
 bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection);
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lensePointOut, vec3& dirOut);
+void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut);
 void calculateReflection(vec3 dirIn, vec3 lensePoint, Lense lense, vec3& dirOut);
 
 
@@ -83,7 +85,7 @@ int main(int argc, char* argv[])
 	t = SDL_GetTicks();	// Set start value for timer.
 
 	LoadTestModel(triangles);
-	SetupLenses();
+	//SetupLenses();
 
 	while (NoQuitMessageSDL())
 	{
@@ -168,20 +170,19 @@ void Draw()
 			vec3 d(x - (SCREEN_WIDTH / 2), y - (SCREEN_HEIGHT / 2), focalLength);
 			d = d*R;
 
-			LenseIntersection intersection;
-			if (IntersectsLense(cameraPos, d, intersection)) {
+			LenseIntersection lenseIntersection;
+			vec3 lenseColor;
+			if (IntersectsLense(cameraPos, d, lenseIntersection)) {
+				
+				vec3 pointOut;
+				vec3 dirOut;
+				calculateRefraction(d, lenseIntersection.position, lenses[lenseIntersection.lenseIndex], pointOut, dirOut);
 
-
-
-				//TODO
+				GetIntersectedTriangleColor(pointOut, dirOut, lenseColor);				
 			}
-			float lenseDistance = glm::length(intersection.position - cameraPos);
-			vec3 lenseColor = vec3(0, 0, 0); //TODO
+			float lenseDistance = glm::length(lenseIntersection.position - cameraPos);
 
-			if (ClosestIntersection(cameraPos, d, triangles, isn)){
-				vec3 illumination = DirectLight(isn);
-				triangleColor = triangles[isn.triangleIndex].color*(illumination + indirectLight);
-			}
+			GetIntersectedTriangleColor(cameraPos, d, triangleColor);
 			
 			vec3 color;
 			if (lenseDistance < isn.distance) {
@@ -197,6 +198,16 @@ void Draw()
 		SDL_UnlockSurface(screen);
 
 	SDL_UpdateRect(screen, 0, 0, 0, 0);
+}
+
+bool GetIntersectedTriangleColor(vec3 startPosition, vec3 dir, vec3& intersectionColor) {
+	Intersection isn;
+	if (ClosestIntersection(startPosition, dir, triangles, isn)){
+		vec3 illumination = DirectLight(isn);
+		intersectionColor = triangles[isn.triangleIndex].color*(illumination + indirectLight);
+		return true;
+	}
+	return false;
 }
 
 
@@ -282,57 +293,67 @@ vec3 DirectLight(const Intersection& i){
 	return illumination;
 }
 
-//DEPRECATED MOTHAFUCKA!!
 void SetupLenses() {
 	Lense lense;
-	lense.center = vec3(0, 0, 0);
-	lense.radius = 2.f;
-	lense.normal = vec3(0, 0, 1);
-	lense.focalLength = 3.5f;
-	//lense.backFocalLength = 3.5f;
+	lense.center = vec3(0, 0, -1.8f);
+	lense.radius = 0.3f;
+	lense.normal = glm::normalize(vec3(0, 0, -1));
+	lense.focalLength = 1.f;
 	lense.refractiveIndex = 1.5f;
 	lenses[0] = lense;
+
+	lense.center = vec3(0, 0 , 1.8f);
+	lense.radius = 0.3f;
+	lense.normal = glm::normalize(vec3(0, 0, 1));
+	lense.focalLength = 1.f;
+	lense.refractiveIndex = 1.5f;
+	lenses[1] = lense;
 }
 
 bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
-	Lense lense = lenses[0];
-
-	float dotProd = glm::dot(dir, (start - lense.center));
-	float length = glm::length(start - lense.center);
-	float square = (dotProd * dotProd) - (length * length) + (lense.radius * lense.radius);
-
-	float d1, d2;
-
-	if (square == 0){
-		d1 = -glm::dot(dir, (start - lense.center));
-		d2 = INT_MAX;
-
-	}
-	else if (square>0){
-		d1 = -glm::dot(dir, (start - lense.radius)) + sqrt(square);
-		d2 = -glm::dot(dir, (start - lense.radius)) - sqrt(square);
-	}
-	else {
-		d1 = INT_MAX;
-		d2 = INT_MAX;
-
-	}
-
-	vec3 intersection1 = start + d1*dir;
-	vec3 intersection2 = start + d2*dir;
-
-
-	if (d1 == INT_MAX){
+	if (lenses.size() <= 0) {
 		return false;
 	}
-	else{
-		if (glm::dot(intersection1 - lense.center, lense.normal) > 0){
-			intersection.position = intersection1;
-			return true;
+	Lense lense = lenses[0];
+	for (int i = 0; i < lenses.size(); ++i) {
+
+		float dotProd = glm::dot(dir, (start - lense.center));
+		float length = glm::length(start - lense.center);
+		float square = (dotProd * dotProd) - (length * length) + (lense.radius * lense.radius);
+
+		float d1, d2;
+
+		if (square == 0){
+			d1 = -glm::dot(dir, (start - lense.center));
+			d2 = INT_MAX;
+
 		}
-		else if ((d2 != INT_MAX) && glm::dot((intersection2 - lense.center), lense.normal) > 0){
-			intersection.position = intersection2;
-			return true;
+		else if (square > 0){
+			d1 = -glm::dot(dir, (start - lense.radius)) + sqrt(square);
+			d2 = -glm::dot(dir, (start - lense.radius)) - sqrt(square);
+		}
+		else {
+			d1 = INT_MAX;
+			d2 = INT_MAX;
+
+		}
+
+		vec3 intersection1 = start + d1*dir;
+		vec3 intersection2 = start + d2*dir;
+
+
+		if (d1 == INT_MAX){
+			return false;
+		}
+		else{
+			if ((glm::dot(intersection1 - lense.center, lense.normal) > 0) && (glm::length(intersection1-start) > 0)){
+				intersection.position = intersection1;
+				return true;
+			}
+			else if (((d2 != INT_MAX) && glm::dot((intersection2 - lense.center), lense.normal) > 0) && (glm::length(intersection2 - start) > 0)){
+				intersection.position = intersection2;
+				return true;
+			}
 		}
 	}
 }
@@ -358,8 +379,8 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	vec3 normalVector = glm::normalize(pointIn - focalPoint);
 
 	//calculating the angle between incoming ray and previous found normal
-	float pitch = glm::radians(90) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
-	float yaw = glm::radians(90) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
+	float pitch = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
+	float yaw = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
 
 	//Snell's law
 	pitch = glm::asin(mediumIn * glm::sin(pitch) / mediumOut);
