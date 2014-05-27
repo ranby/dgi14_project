@@ -23,8 +23,15 @@ struct Lense
 	vec3 center;
 	float radius;
 	vec3 normal;
-	float frontFocalLength;
-	float backFocalLength;
+	float focalLength;
+	float refractiveIndex;
+};
+
+struct LenseIntersection
+{
+	vec3 position;
+	int lenseIndex;
+	float distance;
 };
 
 // ----------------------------------------------------------------------------
@@ -47,7 +54,7 @@ vec3 lightColor = 14.f * vec3(1, 1, 1);
 vec3 indirectLight = 0.5f*vec3(1, 1, 1);
 
 vector<Lense> lenses;
-
+float defaultRefractiveIndex = 1.f;
 
 // ----------------------------------------------------------------------------
 // FUNCTIONS
@@ -60,9 +67,9 @@ bool Intersects(vec3 x);
 vec3 DirectLight(const Intersection& i);
 
 void SetupLenses();
-bool IntersectsLense(vec3 start, vec3 dir, float focalLength, vec3& intersection);
-void calculateRefraction(vec3 dirIn, vec3 lensePointIn, vec3& lensePointOut, vec3& dirOut);
-void calculateReflection(vec3 dirIn, vec3 lensePoint, vec3& dirOut);
+bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection);
+void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lensePointOut, vec3& dirOut);
+void calculateReflection(vec3 dirIn, vec3 lensePoint, Lense lense, vec3& dirOut);
 
 
 
@@ -157,15 +164,31 @@ void Draw()
 	{
 		for (int x = 0; x<SCREEN_WIDTH; ++x)
 		{
-			vec3 color(0, 0, 0);
+			vec3 triangleColor(0, 0, 0);
 			vec3 d(x - (SCREEN_WIDTH / 2), y - (SCREEN_HEIGHT / 2), focalLength);
 			d = d*R;
 
+			LenseIntersection intersection;
+			if (IntersectsLense(cameraPos, d, intersection)) {
+
+
+
+				//TODO
+			}
+			float lenseDistance = glm::length(intersection.position - cameraPos);
+			vec3 lenseColor = vec3(0, 0, 0); //TODO
+
 			if (ClosestIntersection(cameraPos, d, triangles, isn)){
 				vec3 illumination = DirectLight(isn);
-				color = triangles[isn.triangleIndex].color*(illumination + indirectLight);
+				triangleColor = triangles[isn.triangleIndex].color*(illumination + indirectLight);
 			}
-
+			
+			vec3 color;
+			if (lenseDistance < isn.distance) {
+				color = lenseColor;
+			} else {
+				color = triangleColor;
+			}
 			PutPixelSDL(screen, x, y, color);
 		}
 	}
@@ -259,17 +282,19 @@ vec3 DirectLight(const Intersection& i){
 	return illumination;
 }
 
+//DEPRECATED MOTHAFUCKA!!
 void SetupLenses() {
 	Lense lense;
 	lense.center = vec3(0, 0, 0);
 	lense.radius = 2.f;
 	lense.normal = vec3(0, 0, 1);
-	lense.frontFocalLength = 3.5f;
-	lense.backFocalLength = 3.5f;
+	lense.focalLength = 3.5f;
+	//lense.backFocalLength = 3.5f;
+	lense.refractiveIndex = 1.5f;
 	lenses[0] = lense;
 }
 
-bool IntersectsLense(vec3 start, vec3 dir, float focalLength, vec3& intersection) {
+bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 	Lense lense = lenses[0];
 
 	float dotProd = glm::dot(dir, (start - lense.center));
@@ -301,19 +326,50 @@ bool IntersectsLense(vec3 start, vec3 dir, float focalLength, vec3& intersection
 		return false;
 	}
 	else{
-		if (glm::dot((intersection1 - lense.center), lense.normal*focallength) > 0){
-			intersection = intersection1;
+		if (glm::dot(intersection1 - lense.center, lense.normal) > 0){
+			intersection.position = intersection1;
 			return true;
 		}
 		else if ((d2 != INT_MAX) && glm::dot((intersection2 - lense.center), lense.normal) > 0){
-			intersection = intersection2;
+			intersection.position = intersection2;
 			return true;
 		}
 	}
 }
 
-void calculateRefraction(vec3 dirIn, vec3 lensePointIn, vec3& lensePointOut, vec3& dirOut) {
-	//TODO
+void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lensePointOut, vec3& dirOut) {
+	vec3 insideRefractionDir;
+	calculateRefractionVector(lense, dirIn, lensePointIn, defaultRefractiveIndex, lense.refractiveIndex, insideRefractionDir);
+
+	LenseIntersection outIntersection;
+	if (IntersectsLense(lensePointIn, insideRefractionDir, outIntersection)) {
+		calculateRefractionVector(lense, insideRefractionDir, outIntersection.position, lense.refractiveIndex, defaultRefractiveIndex, dirOut);
+
+		lensePointOut = outIntersection.position;
+	}
+	else {
+		//much error, such bad, wow
+	}
+}
+
+void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut) {
+	//finding normal for the point on the lense where the ray hits
+	vec3 focalPoint = (lense.normal * lense.focalLength) + lense.center;
+	vec3 normalVector = glm::normalize(pointIn - focalPoint);
+
+	//calculating the angle between incoming ray and previous found normal
+	float pitch = glm::radians(90) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
+	float yaw = glm::radians(90) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
+
+	//Snell's law
+	pitch = glm::asin(mediumIn * glm::sin(pitch) / mediumOut);
+	yaw = glm::asin(mediumIn * glm::sin(yaw) / mediumOut);
+
+	vec3 n2 = -normalVector;
+	vec3 pitchedVector = vec3(n2.x * glm::cos(pitch) - n2.y * glm::sin(pitch), n2.y * glm::cos(pitch) + n2.x * glm::sin(pitch), n2.z);
+	vec3 yawedVector = vec3(pitchedVector.x * glm::cos(yaw) - pitchedVector.z * glm::cos(yaw), pitchedVector.y, pitchedVector.z * glm::cos(yaw) - pitchedVector.x * glm::sin(yaw));
+
+	dirOut = yawedVector;
 }
 
 void calculateReflection(vec3 dirIn, vec3 lensePoint, vec3& dirOut) {
