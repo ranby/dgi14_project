@@ -5,6 +5,10 @@
 #include "SDLauxiliary.h"
 #include "TestModel.h"
 
+#include <stdio.h>      /* printf, NULL */
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
+
 using namespace std;
 using glm::vec3;
 using glm::mat3;
@@ -73,18 +77,32 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection);
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lensePointOut, vec3& dirOut);
 void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut);
 void calculateReflection(vec3 dirIn, vec3 lensePoint, Lense lense, vec3& dirOut);
-
+void findPerpendicular(vec3 aVector, vec3& perpendicularVector);
 
 
 // ----------------------------------------------------------------------------
 // CODE
 
 void noop(int x, int y){
-	if (x == 0){
-		if (y == 0){
+	if (x == 50){
+		if (y == 50){
 			int i = 0;
 		}
 	}
+}
+
+void findPerpendicular(vec3 aVector, vec3& perpendicularVector){
+    srand(time(NULL));
+    
+    vec3 bVector;
+    bVector = vec3(rand()%50, rand()%50, rand()%50);
+    bVector = glm::normalize(bVector);
+    
+    if(glm::dot(aVector, bVector)==0){
+        bVector.x = bVector.x + 10;
+    }
+    
+    perpendicularVector = glm::cross(aVector, bVector);
 }
 
 int main(int argc, char* argv[])
@@ -330,23 +348,35 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 	if (lenses.size() <= 0) {
 		return false;
 	}
-	Lense lense = lenses[0];
+    dir = glm::normalize(dir);
+	Lense lense;
 	for (int i = 0; i < lenses.size(); ++i) {
+        lense = lenses[i];
 
 		float dotProd = glm::dot(dir, (start - lense.center));
 		float length = glm::length(start - lense.center);
-		float square = (dotProd * dotProd) - (length * length) + (lense.radius * lense.radius);
+        
+        vec3 focalpoint = lense.focalLength*lense.normal;
+        vec3 np;
+        findPerpendicular(lense.normal, np);
+        
+        np = glm::normalize(np);
+        np = lense.center + (np*lense.radius);
+        
+        float sphereRadius = glm::length(focalpoint-np);
+		
+        float square = (dotProd * dotProd) - (length * length) + (sphereRadius * sphereRadius);
 
 		float d1, d2;
 
 		if (square == 0){
-			d1 = -glm::dot(dir, (start - lense.center));
+			d1 = -glm::dot(dir, (start - focalpoint));
 			d2 = INT_MAX;
 
 		}
 		else if (square > 0){
-			d1 = -glm::dot(dir, (start - lense.radius)) + sqrt(square);
-			d2 = -glm::dot(dir, (start - lense.radius)) - sqrt(square);
+			d1 = -glm::dot(dir, (start - focalpoint)) + sqrt(square);
+			d2 = -glm::dot(dir, (start - focalpoint)) - sqrt(square);
 		}
 		else {
 			d1 = INT_MAX;
@@ -358,10 +388,7 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 		vec3 intersection2 = start + d2*dir;
 
 
-		if (d1 == INT_MAX){
-			return false;
-		}
-		else{
+		if (d1 != INT_MAX){
 			if ((glm::dot(intersection1 - lense.center, lense.normal) > 0) && (glm::length(intersection1 - start) > 0)){
 				intersection.position = intersection1;
 				intersection.lenseIndex = i;
@@ -372,10 +399,9 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 				intersection.lenseIndex = i;
 				return true;
 			}
-			return false;
 		}
-
 	}
+    return false;
 }
 
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lensePointOut, vec3& dirOut) {
