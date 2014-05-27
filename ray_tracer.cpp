@@ -1,6 +1,6 @@
 #include <iostream>
-//#include <glm/glm.hpp>
-#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
+#include <glm/glm.hpp>
+//#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
 #include <SDL.h>
 #include "SDLauxiliary.h"
 #include "TestModel.h"
@@ -92,17 +92,17 @@ void noop(int x, int y){
 }
 
 void findPerpendicular(vec3 aVector, vec3& perpendicularVector){
-    srand(time(NULL));
-    
-    vec3 bVector;
-    bVector = vec3(rand()%50, rand()%50, rand()%50);
-    bVector = glm::normalize(bVector);
-    
-    if(glm::dot(aVector, bVector)==0){
-        bVector.x = bVector.x + 10;
-    }
-    
-    perpendicularVector = glm::cross(aVector, bVector);
+	srand(time(NULL));
+
+	vec3 bVector;
+	bVector = vec3(rand() % 50, rand() % 50, rand() % 50);
+	bVector = glm::normalize(bVector);
+
+	if (glm::dot(aVector, bVector) == 0){
+		bVector.x = bVector.x + 10;
+	}
+
+	perpendicularVector = glm::cross(aVector, bVector);
 }
 
 int main(int argc, char* argv[])
@@ -348,24 +348,25 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 	if (lenses.size() <= 0) {
 		return false;
 	}
-    dir = glm::normalize(dir);
+	dir = glm::normalize(dir);
 	Lense lense;
 	for (int i = 0; i < lenses.size(); ++i) {
-        lense = lenses[i];
+		lense = lenses[i];
 
-		float dotProd = glm::dot(dir, (start - lense.center));
+		vec3 test = start - lense.center;
+		float dotProd = glm::dot(dir, test);
 		float length = glm::length(start - lense.center);
-        
-        vec3 focalpoint = lense.focalLength*lense.normal;
-        vec3 np;
-        findPerpendicular(lense.normal, np);
-        
-        np = glm::normalize(np);
-        np = lense.center + (np*lense.radius);
-        
-        float sphereRadius = glm::length(focalpoint-np);
-		
-        float square = (dotProd * dotProd) - (length * length) + (sphereRadius * sphereRadius);
+
+		vec3 focalpoint = lense.focalLength*lense.normal + lense.center;
+		vec3 np;
+		findPerpendicular(lense.normal, np);
+
+		np = glm::normalize(np);
+		np = lense.center + (np*lense.radius);
+
+		float sphereRadius = glm::length(focalpoint - np);
+
+		float square = (dotProd * dotProd) - (length * length) + (sphereRadius * sphereRadius);
 
 		float d1, d2;
 
@@ -401,7 +402,7 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 			}
 		}
 	}
-    return false;
+	return false;
 }
 
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lensePointOut, vec3& dirOut) {
@@ -425,6 +426,7 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	vec3 normalVector = glm::normalize(pointIn - focalPoint);
 
 	//calculating the angle between incoming ray and previous found normal
+	dirIn + 0.00000001f;
 	float pitch = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
 	float yaw = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
 
@@ -434,7 +436,7 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 
 	vec3 n2 = -normalVector;
 	vec3 pitchedVector = vec3(n2.x * glm::cos(pitch) - n2.y * glm::sin(pitch), n2.y * glm::cos(pitch) + n2.x * glm::sin(pitch), n2.z);
-	vec3 yawedVector = vec3(pitchedVector.x * glm::cos(yaw) - pitchedVector.z * glm::cos(yaw), pitchedVector.y, pitchedVector.z * glm::cos(yaw) - pitchedVector.x * glm::sin(yaw));
+	vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::cos(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
 
 	dirOut = yawedVector;
 }
