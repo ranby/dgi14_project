@@ -42,14 +42,14 @@ struct LenseIntersection
 // ----------------------------------------------------------------------------
 // GLOBAL VARIABLES
 
-const int SCREEN_WIDTH = 150;
-const int SCREEN_HEIGHT = 150;
+const int SCREEN_WIDTH = 100;
+const int SCREEN_HEIGHT = 100;
 SDL_Surface* screen;
 int t;
 float PI = 3.14159f;
 
 float focalLength = SCREEN_HEIGHT / 2;
-vec3 cameraPos(0, 0, -3);
+vec3 cameraPos(0, 0, -2);
 vector<Triangle> triangles;
 mat3 R;
 float yaw;
@@ -84,8 +84,8 @@ void findPerpendicular(vec3 aVector, vec3& perpendicularVector);
 // CODE
 
 void noop(int x, int y){
-	if (x == 140){
-		if (y == 140){
+	if (x == 5){
+		if (y == 5){
 			int i = 0;
 		}
 	}
@@ -436,20 +436,18 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	//calculating the angle between incoming ray and previous found normal
 	dirIn += 0.00000001f;
 	normalVector += 0.00000001f;
-	float pitch = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
-	float yaw = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
+	//float pitch = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
+	//float yaw = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
+	float pitch = glm::atan(dirIn.y / dirIn.x) - glm::atan(normalVector.y / normalVector.x);
+	float yaw = glm::atan(dirIn.z / dirIn.x) - glm::atan(normalVector.z / normalVector.x);
 
 	//Snell's law
 	pitch = glm::asin(mediumIn * glm::sin(pitch) / mediumOut);
 	yaw = glm::asin(mediumIn * glm::sin(yaw) / mediumOut);
 
 	vec3 n2;
-	if (flipDot < 0) {
-		n2 = normalVector;
-	}
-	else {
-		n2 = -normalVector;
-	}
+	n2 = normalVector;
+
 	vec3 pitchedVector = vec3(n2.x * glm::cos(pitch) - n2.y * glm::sin(pitch), n2.y * glm::cos(pitch) + n2.x * glm::sin(pitch), n2.z);
 	vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::sin(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
 
