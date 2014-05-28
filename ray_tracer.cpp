@@ -49,7 +49,7 @@ int t;
 float PI = 3.14159f;
 
 float focalLength = SCREEN_HEIGHT / 2;
-vec3 cameraPos(0, 0, -2);
+vec3 cameraPos(0, 0, -2.5);
 vector<Triangle> triangles;
 mat3 R;
 float yaw;
@@ -78,14 +78,15 @@ void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& le
 void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut);
 void calculateReflection(vec3 dirIn, vec3 lensePoint, Lense lense, vec3& dirOut);
 void findPerpendicular(vec3 aVector, vec3& perpendicularVector);
+vec3 rotateVector(vec3 vector, float pitch, float yaw);
 
 
 // ----------------------------------------------------------------------------
 // CODE
 
 void noop(int x, int y){
-	if (x == 5){
-		if (y == 5){
+	if (x == 35){
+		if (y == 50){
 			int i = 0;
 		}
 	}
@@ -191,6 +192,7 @@ void Draw()
 
 	Intersection isn1;
 	Intersection isn2;
+	isn2.distance = INT_MAX;
 	for (int y = 0; y<SCREEN_HEIGHT; ++y)
 	{
 		for (int x = 0; x<SCREEN_WIDTH; ++x)
@@ -434,8 +436,20 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	}
 
 	//calculating the angle between incoming ray and previous found normal
-	dirIn += 0.00000001f;
-	normalVector += 0.00000001f;
+
+	if (dirIn.x == 0)
+		dirIn.x += 0.00000001f;
+	if (dirIn.y == 0)
+		dirIn.y += 0.00000001f;
+	if (dirIn.z == 0)
+		dirIn.z += 0.00000001f;
+	if (normalVector.x == 0)
+		normalVector.x += 0.00000001f;
+	if (normalVector.y == 0)
+		normalVector.y += 0.00000001f;
+	if (normalVector.z == 0)
+		normalVector.z += 0.00000001f;
+	
 	//float pitch = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
 	//float yaw = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
 	float pitch = glm::atan(dirIn.y / dirIn.x) - glm::atan(normalVector.y / normalVector.x);
@@ -448,10 +462,19 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	vec3 n2;
 	n2 = normalVector;
 
-	vec3 pitchedVector = vec3(n2.x * glm::cos(pitch) - n2.y * glm::sin(pitch), n2.y * glm::cos(pitch) + n2.x * glm::sin(pitch), n2.z);
-	vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::sin(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
+	//vec3 pitchedVector = vec3(n2.x, (n2.y * glm::cos(pitch)) + (n2.x * glm::sin(pitch)), (n2.z * glm::cos(pitch)) - (n2.x * glm::sin(pitch)));
+	//vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::sin(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
+	vec3 rotatedVector = rotateVector(normalVector, pitch, yaw);
 
-	dirOut = yawedVector;
+	dirOut = rotatedVector;
+}
+
+vec3 rotateVector(vec3 vector, float pitch, float yaw) {
+	mat3 matPitch = mat3(vec3(1, 0, 0), vec3(0, cos(pitch), -sin(pitch)), vec3(0, sin(pitch), cos(pitch)));
+	mat3 matYaw = mat3(vec3(cos(yaw), 0, sin(yaw)), vec3(0, 1, 0), vec3(-sin(yaw), 0, cos(yaw)));
+	mat3 mat = matPitch * matYaw;
+	vec3 rotated = mat * vector;
+	return rotated;
 }
 
 void calculateReflection(vec3 dirIn, vec3 lensePoint, vec3& dirOut) {
