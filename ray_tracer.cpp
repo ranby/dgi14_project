@@ -1,6 +1,6 @@
 #include <iostream>
-//#include <glm/glm.hpp>
-#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
+#include <glm/glm.hpp>
+//#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
 #include <SDL.h>
 #include "SDLauxiliary.h"
 #include "TestModel.h"
@@ -42,8 +42,8 @@ struct LenseIntersection
 // ----------------------------------------------------------------------------
 // GLOBAL VARIABLES
 
-const int SCREEN_WIDTH = 300;
-const int SCREEN_HEIGHT = 300;
+const int SCREEN_WIDTH = 150;
+const int SCREEN_HEIGHT = 150;
 SDL_Surface* screen;
 int t;
 float PI = 3.14159f;
@@ -73,8 +73,8 @@ bool Intersects(vec3 x);
 vec3 DirectLight(const Intersection& i);
 
 void SetupLenses();
-bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection);
-void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lensePointOut, vec3& dirOut);
+bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection, int previousIndex);
+void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& lensePointOut, vec3& dirOut);
 void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut);
 void calculateReflection(vec3 dirIn, vec3 lensePoint, Lense lense, vec3& dirOut);
 void findPerpendicular(vec3 aVector, vec3& perpendicularVector);
@@ -202,13 +202,13 @@ void Draw()
 			d = d*R;
 
 			LenseIntersection lenseIntersection;
-            lenseIntersection.position.z = INT_MAX;
-			vec3 lenseColor = vec3(1,1,1);
-			if (IntersectsLense(cameraPos, d, lenseIntersection)) {
+			lenseIntersection.position.z = INT_MAX;
+			vec3 lenseColor = vec3(1, 1, 1);
+			if (IntersectsLense(cameraPos, d, lenseIntersection, -1)) {
 
 				vec3 pointOut;
 				vec3 dirOut;
-				calculateRefraction(d, lenseIntersection.position, lenses[lenseIntersection.lenseIndex], pointOut, dirOut);
+				calculateRefraction(d, lenseIntersection.position, lenseIntersection.lenseIndex, pointOut, dirOut);
 
 				GetIntersectedTriangleColor(pointOut, dirOut, lenseColor, isn1);
 			}
@@ -345,71 +345,74 @@ void SetupLenses() {
 	lenses[1] = lense;
 }
 
-bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
+bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection, int previousIndex) {
 	if (lenses.size() <= 0) {
 		return false;
 	}
 	dir = glm::normalize(dir);
 	Lense lense;
 	for (int i = 0; i < lenses.size(); ++i) {
-		lense = lenses[i];
+		if (i != previousIndex) {
+			lense = lenses[i];
 
-		vec3 focalpoint = (-lense.focalLength)*lense.normal + lense.center;
+			vec3 focalpoint = (-lense.focalLength)*lense.normal + lense.center;
 
-		vec3 ray = start - focalpoint;
-		float dotProd = glm::dot(dir, ray);
-		float length = glm::length(ray);
+			vec3 ray = start - focalpoint;
+			float dotProd = glm::dot(dir, ray);
+			float length = glm::length(ray);
 
-		vec3 np;
-		findPerpendicular(lense.normal, np);
-		np = glm::normalize(np);
-		np = lense.center + (np*lense.radius);
+			vec3 np;
+			findPerpendicular(lense.normal, np);
+			np = glm::normalize(np);
+			np = lense.center + (np*lense.radius);
 
-		float sphereRadius = glm::length(focalpoint - np);
+			float sphereRadius = glm::length(focalpoint - np);
 
-		float square = (dotProd * dotProd) - (length * length) + (sphereRadius * sphereRadius);
+			float square = (dotProd * dotProd) - (length * length) + (sphereRadius * sphereRadius);
 
-		float d1, d2;
+			float d1, d2;
 
-		if (square == 0){
-			d1 = -dotProd;
-			d2 = INT_MAX;
-		}
-		else if (square > 0){
-			d1 = -dotProd + sqrt(square);
-			d2 = -dotProd - sqrt(square);
-		}
-		else {
-			d1 = INT_MAX;
-			d2 = INT_MAX;
-
-		}
-
-		vec3 intersection1 = start + d1*dir;
-		vec3 intersection2 = start + d2*dir;
-
-		if (d1 != INT_MAX){
-			if ((glm::dot(intersection1 - lense.center, lense.normal) > 0) && (glm::length(intersection1 - start) > 0.00001)){
-				intersection.position = intersection1;
-				intersection.lenseIndex = i;
-				return true;
+			if (square == 0){
+				d1 = -dotProd;
+				d2 = INT_MAX;
 			}
-			else if (((d2 != INT_MAX) && glm::dot((intersection2 - lense.center), lense.normal) > 0) && (glm::length(intersection2 - start) > 0.00001)){
-				intersection.position = intersection2;
-				intersection.lenseIndex = i;
-				return true;
+			else if (square > 0){
+				d1 = -dotProd + sqrt(square);
+				d2 = -dotProd - sqrt(square);
+			}
+			else {
+				d1 = INT_MAX;
+				d2 = INT_MAX;
+
+			}
+
+			vec3 intersection1 = start + d1*dir;
+			vec3 intersection2 = start + d2*dir;
+
+			if (d1 != INT_MAX){
+				if ((glm::dot(intersection1 - lense.center, lense.normal) > 0) && (glm::length(intersection1 - start) > 0)){
+					intersection.position = intersection1;
+					intersection.lenseIndex = i;
+					return true;
+				}
+				else if (((d2 != INT_MAX) && glm::dot((intersection2 - lense.center), lense.normal) > 0) && (glm::length(intersection2 - start) > 0)){
+					intersection.position = intersection2;
+					intersection.lenseIndex = i;
+					return true;
+				}
 			}
 		}
 	}
 	return false;
 }
 
-void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lensePointOut, vec3& dirOut) {
+void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& lensePointOut, vec3& dirOut) {
 	vec3 insideRefractionDir;
+	Lense lense = lenses[lenseIndex];
 	calculateRefractionVector(lense, dirIn, lensePointIn, defaultRefractiveIndex, lense.refractiveIndex, insideRefractionDir);
 
 	LenseIntersection outIntersection;
-	if (IntersectsLense(lensePointIn, insideRefractionDir, outIntersection)) {
+	if (IntersectsLense(lensePointIn, insideRefractionDir, outIntersection, lenseIndex)) {
 		Lense outLense = lenses[outIntersection.lenseIndex];
 		calculateRefractionVector(outLense, insideRefractionDir, outIntersection.position, outLense.refractiveIndex, defaultRefractiveIndex, dirOut);
 
