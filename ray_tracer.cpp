@@ -353,14 +353,14 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 	for (int i = 0; i < lenses.size(); ++i) {
 		lense = lenses[i];
 
-		vec3 test = start - lense.center;
-		float dotProd = glm::dot(dir, test);
-		float length = glm::length(start - lense.center);
+		vec3 focalpoint = (-lense.focalLength)*lense.normal + lense.center;
 
-		vec3 focalpoint = lense.focalLength*lense.normal + lense.center;
+		vec3 ray = start - focalpoint;
+		float dotProd = glm::dot(dir, ray);
+		float length = glm::length(ray);
+
 		vec3 np;
 		findPerpendicular(lense.normal, np);
-
 		np = glm::normalize(np);
 		np = lense.center + (np*lense.radius);
 
@@ -371,13 +371,12 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 		float d1, d2;
 
 		if (square == 0){
-			d1 = -glm::dot(dir, (start - focalpoint));
+			d1 = -dotProd;
 			d2 = INT_MAX;
-
 		}
 		else if (square > 0){
-			d1 = -glm::dot(dir, (start - focalpoint)) + sqrt(square);
-			d2 = -glm::dot(dir, (start - focalpoint)) - sqrt(square);
+			d1 = -dotProd + sqrt(square);
+			d2 = -dotProd - sqrt(square);
 		}
 		else {
 			d1 = INT_MAX;
@@ -387,7 +386,6 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 
 		vec3 intersection1 = start + d1*dir;
 		vec3 intersection2 = start + d2*dir;
-
 
 		if (d1 != INT_MAX){
 			if ((glm::dot(intersection1 - lense.center, lense.normal) > 0) && (glm::length(intersection1 - start) > 0)){
@@ -411,7 +409,8 @@ void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lense
 
 	LenseIntersection outIntersection;
 	if (IntersectsLense(lensePointIn, insideRefractionDir, outIntersection)) {
-		calculateRefractionVector(lense, insideRefractionDir, outIntersection.position, lense.refractiveIndex, defaultRefractiveIndex, dirOut);
+		Lense outLense = lenses[outIntersection.lenseIndex];
+		calculateRefractionVector(outLense, insideRefractionDir, outIntersection.position, outLense.refractiveIndex, defaultRefractiveIndex, dirOut);
 
 		lensePointOut = outIntersection.position;
 	}
@@ -422,8 +421,13 @@ void calculateRefraction(vec3 dirIn, vec3 lensePointIn, Lense lense, vec3& lense
 
 void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut) {
 	//finding normal for the point on the lense where the ray hits
-	vec3 focalPoint = (lense.normal * lense.focalLength) + lense.center;
+	vec3 focalPoint = (-lense.focalLength)*lense.normal + lense.center;
 	vec3 normalVector = glm::normalize(pointIn - focalPoint);
+
+	float flipDot = glm::dot(normalVector, dirIn); // check if ray is on its way in or out of the lense
+	if (flipDot < 0){
+		normalVector = glm::normalize(focalPoint - pointIn);
+	}
 
 	//calculating the angle between incoming ray and previous found normal
 	dirIn += 0.00000001f;
@@ -435,9 +439,15 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	pitch = glm::asin(mediumIn * glm::sin(pitch) / mediumOut);
 	yaw = glm::asin(mediumIn * glm::sin(yaw) / mediumOut);
 
-	vec3 n2 = -normalVector;
+	vec3 n2;
+	if (flipDot < 0) {
+		n2 = normalVector;
+	}
+	else {
+		n2 = -normalVector;
+	}
 	vec3 pitchedVector = vec3(n2.x * glm::cos(pitch) - n2.y * glm::sin(pitch), n2.y * glm::cos(pitch) + n2.x * glm::sin(pitch), n2.z);
-	vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::cos(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
+	vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::sin(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
 
 	dirOut = yawedVector;
 }
