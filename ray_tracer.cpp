@@ -42,8 +42,8 @@ struct LenseIntersection
 // ----------------------------------------------------------------------------
 // GLOBAL VARIABLES
 
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 800;
+const int SCREEN_WIDTH = 300;
+const int SCREEN_HEIGHT = 300;
 SDL_Surface* screen;
 int t;
 float PI = 3.14159f;
@@ -84,8 +84,8 @@ void findPerpendicular(vec3 aVector, vec3& perpendicularVector);
 // CODE
 
 void noop(int x, int y){
-	if (x == 50){
-		if (y == 50){
+	if (x == 140){
+		if (y == 140){
 			int i = 0;
 		}
 	}
@@ -203,7 +203,7 @@ void Draw()
 
 			LenseIntersection lenseIntersection;
             lenseIntersection.position.z = INT_MAX;
-			vec3 lenseColor;
+			vec3 lenseColor = vec3(1,1,1);
 			if (IntersectsLense(cameraPos, d, lenseIntersection)) {
 
 				vec3 pointOut;
@@ -389,12 +389,12 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection) {
 		vec3 intersection2 = start + d2*dir;
 
 		if (d1 != INT_MAX){
-			if ((glm::dot(intersection1 - lense.center, lense.normal) > 0) && (glm::length(intersection1 - start) > 0)){
+			if ((glm::dot(intersection1 - lense.center, lense.normal) > 0) && (glm::length(intersection1 - start) > 0.00001)){
 				intersection.position = intersection1;
 				intersection.lenseIndex = i;
 				return true;
 			}
-			else if (((d2 != INT_MAX) && glm::dot((intersection2 - lense.center), lense.normal) > 0) && (glm::length(intersection2 - start) > 0)){
+			else if (((d2 != INT_MAX) && glm::dot((intersection2 - lense.center), lense.normal) > 0) && (glm::length(intersection2 - start) > 0.00001)){
 				intersection.position = intersection2;
 				intersection.lenseIndex = i;
 				return true;
