@@ -1,6 +1,6 @@
 #include <iostream>
-#include <glm/glm.hpp>
-//#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
+//#include <glm/glm.hpp>
+#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
 #include <SDL.h>
 #include "SDLauxiliary.h"
 #include "TestModel.h"
@@ -42,14 +42,14 @@ struct LenseIntersection
 // ----------------------------------------------------------------------------
 // GLOBAL VARIABLES
 
-const int SCREEN_WIDTH = 100;
-const int SCREEN_HEIGHT = 100;
+const int SCREEN_WIDTH = 800;
+const int SCREEN_HEIGHT = 800;
 SDL_Surface* screen;
 int t;
 float PI = 3.14159f;
 
 float focalLength = SCREEN_HEIGHT / 2;
-vec3 cameraPos(0, 0, -2);
+vec3 cameraPos(0, 0, -3);
 vector<Triangle> triangles;
 mat3 R;
 float yaw;
@@ -202,6 +202,7 @@ void Draw()
 			d = d*R;
 
 			LenseIntersection lenseIntersection;
+            lenseIntersection.position.z = INT_MAX;
 			vec3 lenseColor;
 			if (IntersectsLense(cameraPos, d, lenseIntersection)) {
 
