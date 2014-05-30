@@ -1,6 +1,6 @@
 #include <iostream>
-#include <glm/glm.hpp>
-//#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
+//#include <glm/glm.hpp>
+#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
 #include <SDL.h>
 #include "SDLauxiliary.h"
 #include "TestModel.h"
@@ -42,14 +42,14 @@ struct LenseIntersection
 // ----------------------------------------------------------------------------
 // GLOBAL VARIABLES
 
-const int SCREEN_WIDTH = 100;
-const int SCREEN_HEIGHT = 100;
+const int SCREEN_WIDTH = 300;
+const int SCREEN_HEIGHT = 300;
 SDL_Surface* screen;
 int t;
 float PI = 3.14159f;
 
 float focalLength = SCREEN_HEIGHT / 2;
-vec3 cameraPos(0, 0, -2.5);
+vec3 cameraPos(0, 0, -2.8);
 vector<Triangle> triangles;
 mat3 R;
 float yaw;
@@ -205,7 +205,7 @@ void Draw()
 
 			LenseIntersection lenseIntersection;
 			lenseIntersection.position.z = INT_MAX;
-			vec3 lenseColor = vec3(1, 1, 1);
+			vec3 lenseColor = vec3(0, 0, 0);
 			if (IntersectsLense(cameraPos, d, lenseIntersection, -1)) {
 
 				vec3 pointOut;
@@ -332,17 +332,17 @@ void SetupLenses() {
 	lenses = vector<Lense>(2);
 
 	Lense lense;
-	lense.center = vec3(0, 0, -1.8f);
-	lense.radius = 0.3f;
+	lense.center = vec3(0, 0, -1.3f);
+	lense.radius = 0.7f;
 	lense.normal = glm::normalize(vec3(0, 0, -1));
-	lense.focalLength = 1.f;
+	lense.focalLength = -3.5f;
 	lense.refractiveIndex = 1.5f;
 	lenses[0] = lense;
 
-	lense.center = vec3(0, 0, -1.8f);
-	lense.radius = 0.3f;
+	lense.center = vec3(0, 0, -1.3f);
+	lense.radius = 0.7f;
 	lense.normal = glm::normalize(vec3(0, 0, 1));
-	lense.focalLength = 1.f;
+	lense.focalLength = -3.f;
 	lense.refractiveIndex = 1.5f;
 	lenses[1] = lense;
 }
@@ -452,19 +452,20 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	
 	//float pitch = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
 	//float yaw = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
-	float pitch = glm::atan(dirIn.y / dirIn.x) - glm::atan(normalVector.y / normalVector.x);
-	float yaw = glm::atan(dirIn.z / dirIn.x) - glm::atan(normalVector.z / normalVector.x);
+	float pitch1 = glm::atan(dirIn.y / dirIn.z) - glm::atan(normalVector.y / normalVector.z);
+	float yaw1 = glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.x / normalVector.z);
 
 	//Snell's law
-	pitch = glm::asin(mediumIn * glm::sin(pitch) / mediumOut);
-	yaw = glm::asin(mediumIn * glm::sin(yaw) / mediumOut);
+	float pitch2 = glm::asin(mediumIn * glm::sin(pitch1) / mediumOut);
+	float yaw2 = glm::asin(mediumIn * glm::sin(yaw1) / mediumOut);
 
 	vec3 n2;
 	n2 = normalVector;
 
-	//vec3 pitchedVector = vec3(n2.x, (n2.y * glm::cos(pitch)) + (n2.x * glm::sin(pitch)), (n2.z * glm::cos(pitch)) - (n2.x * glm::sin(pitch)));
-	//vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::sin(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
-	vec3 rotatedVector = rotateVector(normalVector, pitch, yaw);
+//	vec3 pitchedVector = vec3(dirIn.x, (dirIn.y * glm::cos(pitch)) + (dirIn.x * glm::sin(pitch)), (dirIn.z * glm::cos(pitch)) - (dirIn.x * glm::sin(pitch)));
+//	vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::sin(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
+
+	vec3 rotatedVector = rotateVector(dirIn, pitch2-pitch1, yaw1-yaw2);
 
 	dirOut = rotatedVector;
 }
