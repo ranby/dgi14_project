@@ -1,6 +1,6 @@
 #include <iostream>
-//#include <glm/glm.hpp>
-#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
+#include <glm/glm.hpp>
+//#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
 #include <SDL.h>
 #include "SDLauxiliary.h"
 #include "TestModel.h"
@@ -42,8 +42,8 @@ struct LenseIntersection
 // ----------------------------------------------------------------------------
 // GLOBAL VARIABLES
 
-const int SCREEN_WIDTH = 300;
-const int SCREEN_HEIGHT = 300;
+const int SCREEN_WIDTH = 100;
+const int SCREEN_HEIGHT = 100;
 SDL_Surface* screen;
 int t;
 float PI = 3.14159f;
@@ -59,6 +59,7 @@ vec3 lightColor = 14.f * vec3(1, 1, 1);
 vec3 indirectLight = 0.5f*vec3(1, 1, 1);
 
 vector<Lense> lenses;
+vec3 lenseCenterStart = vec3(0, 0, -1.5f);
 float defaultRefractiveIndex = 1.f;
 
 // ----------------------------------------------------------------------------
@@ -72,7 +73,7 @@ bool GetIntersectedTriangleColor(vec3 startPosition, vec3 dir, vec3& intersectio
 bool Intersects(vec3 x);
 vec3 DirectLight(const Intersection& i);
 
-void SetupLenses();
+void SetupLenses(vec3 center);
 bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection, int previousIndex);
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& lensePointOut, vec3& dirOut);
 void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut);
@@ -114,7 +115,7 @@ int main(int argc, char* argv[])
 
 	LoadTestModel(triangles);
 
-	SetupLenses();
+	SetupLenses(lenseCenterStart);
 
 	while (NoQuitMessageSDL())
 	{
@@ -175,7 +176,20 @@ void Update()
 	if (keystate[SDLK_e]) {
 		lightPos += down / float(4);
 	}
+	if (keystate[SDLK_i]) {
+		lenseCenterStart -= down / float(4);
+	}
+	if (keystate[SDLK_j]) {
+		lenseCenterStart -= right / float(4);
+	}
+	if (keystate[SDLK_k]) {
+		lenseCenterStart += down / float(4);
+	}
+	if (keystate[SDLK_l]) {
+		lenseCenterStart += right / float(4);
+	}
 
+	SetupLenses(lenseCenterStart);
 }
 
 void CalculateRotation() {
@@ -328,21 +342,21 @@ vec3 DirectLight(const Intersection& i){
 	return illumination;
 }
 
-void SetupLenses() {
+void SetupLenses(vec3 center) {
 	lenses = vector<Lense>(2);
 
 	Lense lense;
-	lense.center = vec3(0, 0, -1.3f);
+	lense.center = center;
 	lense.radius = 0.7f;
 	lense.normal = glm::normalize(vec3(0, 0, -1));
-	lense.focalLength = -3.5f;
+	lense.focalLength = 2.f;
 	lense.refractiveIndex = 1.5f;
 	lenses[0] = lense;
 
-	lense.center = vec3(0, 0, -1.3f);
+	lense.center = center;
 	lense.radius = 0.7f;
 	lense.normal = glm::normalize(vec3(0, 0, 1));
-	lense.focalLength = -3.f;
+	lense.focalLength = 1.f;
 	lense.refractiveIndex = 1.5f;
 	lenses[1] = lense;
 }
@@ -449,7 +463,7 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 		normalVector.y += 0.00000001f;
 	if (normalVector.z == 0)
 		normalVector.z += 0.00000001f;
-	
+
 	//float pitch = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.y) - glm::atan(normalVector.y / normalVector.x);
 	//float yaw = glm::radians(90.f) - glm::atan(dirIn.x / dirIn.z) - glm::atan(normalVector.z / normalVector.x);
 	float pitch1 = glm::atan(dirIn.y / dirIn.z) - glm::atan(normalVector.y / normalVector.z);
@@ -462,10 +476,10 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	vec3 n2;
 	n2 = normalVector;
 
-//	vec3 pitchedVector = vec3(dirIn.x, (dirIn.y * glm::cos(pitch)) + (dirIn.x * glm::sin(pitch)), (dirIn.z * glm::cos(pitch)) - (dirIn.x * glm::sin(pitch)));
-//	vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::sin(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
+	//	vec3 pitchedVector = vec3(dirIn.x, (dirIn.y * glm::cos(pitch)) + (dirIn.x * glm::sin(pitch)), (dirIn.z * glm::cos(pitch)) - (dirIn.x * glm::sin(pitch)));
+	//	vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::sin(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
 
-	vec3 rotatedVector = rotateVector(dirIn, pitch2-pitch1, yaw1-yaw2);
+	vec3 rotatedVector = rotateVector(dirIn, pitch2 - pitch1, yaw1 - yaw2);
 
 	dirOut = rotatedVector;
 }
