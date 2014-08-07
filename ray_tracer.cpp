@@ -49,7 +49,7 @@ int t;
 float PI = 3.14159f;
 
 float focalLength = SCREEN_HEIGHT / 2;
-vec3 cameraPos(0, 0, -2.8);
+vec3 cameraPos(0, 0, -2.f);
 vector<Triangle> triangles;
 mat3 R;
 float yaw;
@@ -59,7 +59,7 @@ vec3 lightColor = 14.f * vec3(1, 1, 1);
 vec3 indirectLight = 0.5f*vec3(1, 1, 1);
 
 vector<Lense> lenses;
-vec3 lenseCenterStart = vec3(0, 0, -1.5f);
+vec3 lenseCenterStart = vec3(0, 0, -1.f);
 float defaultRefractiveIndex = 1.f;
 
 // ----------------------------------------------------------------------------
@@ -422,11 +422,16 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection, int 
 	return false;
 }
 
+/*
+Calculates the refraction of the ray that is being traced. Calculates both the refraction that happens when the ray hits the lens 
+aswell as when it exits.
+*/
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& lensePointOut, vec3& dirOut) {
 	vec3 insideRefractionDir;
 	Lense lense = lenses[lenseIndex];
 	calculateRefractionVector(lense, dirIn, lensePointIn, defaultRefractiveIndex, lense.refractiveIndex, insideRefractionDir);
 
+	//The intersection when the ray exits the lense
 	LenseIntersection outIntersection;
 	if (IntersectsLense(lensePointIn, insideRefractionDir, outIntersection, lenseIndex)) {
 		Lense outLense = lenses[outIntersection.lenseIndex];
@@ -439,6 +444,9 @@ void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& le
 	}
 }
 
+/*
+Calcuates a vector that describes the ray when it has hit the lense at the point 'pointIn'. 
+*/
 void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut) {
 	//finding normal for the point on the lense where the ray hits
 	vec3 focalPoint = (-lense.focalLength)*lense.normal + lense.center;
@@ -484,14 +492,13 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	dirOut = rotatedVector;
 }
 
+/*
+Rotates the 'vector' as specified by 'pith' and 'yaw'. Returnes the rotated vector.
+*/
 vec3 rotateVector(vec3 vector, float pitch, float yaw) {
 	mat3 matPitch = mat3(vec3(1, 0, 0), vec3(0, cos(pitch), -sin(pitch)), vec3(0, sin(pitch), cos(pitch)));
 	mat3 matYaw = mat3(vec3(cos(yaw), 0, sin(yaw)), vec3(0, 1, 0), vec3(-sin(yaw), 0, cos(yaw)));
 	mat3 mat = matPitch * matYaw;
 	vec3 rotated = mat * vector;
 	return rotated;
-}
-
-void calculateReflection(vec3 dirIn, vec3 lensePoint, vec3& dirOut) {
-	//TODO
 }
