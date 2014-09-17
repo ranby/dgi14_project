@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
 		const char * filename;// = "'~/Desktop/lense_screenshot";
 
 		std::stringstream sstm;
-		sstm << "C:\\Users\\erikr_000\\Documents\\Visual Studio 2013\\Projects\\dgi_project\\dgi_project\\screen" << pic << "-" << ".bmp";
+		sstm << "C:\\Users\\Erik\\Documents\\Visual Studio 2013\\Projects\\dgi_project\\dgi_project\\screen" << pic << "-" << ".bmp";
 		std:string sstmstr = sstm.str();
 		filename = sstmstr.c_str();
 
@@ -404,6 +404,9 @@ vec3 DirectLight(const Intersection& i){
 	return illumination;
 }
 
+/*
+Initiates and places lenses at some point in the model
+*/
 void SetupLenses(vec3 center) {
 	lenses = vector<Lense>(2);
 
@@ -434,6 +437,9 @@ float getSign(float number){
 	}
 }
 
+/*
+Initiates noise of all lenses.
+*/
 void SetupLenseNoises(vector<Lense> lenses){
 	lensenoises = vector<LenseNoiseMap>(2);
 	float maxnoise = 9.8;
@@ -463,8 +469,10 @@ void SetupLenseNoises(vector<Lense> lenses){
 	}
 }
 
-
-
+/*
+Checks if a ray starting in point 'start' in direction 'dir' intersects a lense in its path.
+Returns true of it does, otherwise false.
+*/
 bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection, int previousIndex) {
 	if (lenses.size() <= 0) {
 		return false;
@@ -531,11 +539,16 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection, int 
 	return false;
 }
 
+/*
+Calculates the refraction of the ray that is being traced. Calculates both the refraction that happens when the ray hits the lens
+aswell as when it exits.
+*/
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& lensePointOut, vec3& dirOut) {
 	vec3 insideRefractionDir;
 	Lense lense = lenses[lenseIndex];
 	calculateRefractionVector(lense, dirIn, lensePointIn, defaultRefractiveIndex, lense.refractiveIndex, insideRefractionDir);
 
+	//The intersection when the ray exits the lense
 	LenseIntersection outIntersection;
 	if (IntersectsLense(lensePointIn, insideRefractionDir, outIntersection, lenseIndex)) {
 		Lense outLense = lenses[outIntersection.lenseIndex];
@@ -548,6 +561,9 @@ void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& le
 	}
 }
 
+/*
+Calcuates a vector that describes the ray when it has hit the lense at the point 'pointIn'.
+*/
 void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut) {
 	//finding normal for the point on the lense where the ray hits
 	vec3 focalPoint = (-lense.focalLength)*lense.normal + lense.center;
@@ -600,6 +616,9 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	//cout << "noise2: " << dirOut.x << "," << dirOut.y << "," << dirOut.z << "\n";
 }
 
+/*
+Rotates the 'vector' as specified by 'pith' and 'yaw'. Returnes the rotated vector.
+*/
 vec3 rotateVector(vec3 vector, float pitch, float yaw) {
 	mat3 matPitch = mat3(vec3(1, 0, 0), vec3(0, cos(pitch), -sin(pitch)), vec3(0, sin(pitch), cos(pitch)));
 	mat3 matYaw = mat3(vec3(cos(yaw), 0, sin(yaw)), vec3(0, 1, 0), vec3(-sin(yaw), 0, cos(yaw)));
@@ -608,9 +627,6 @@ vec3 rotateVector(vec3 vector, float pitch, float yaw) {
 	return rotated;
 }
 
-void calculateReflection(vec3 dirIn, vec3 lensePoint, vec3& dirOut) {
-	//TODO
-}
 
 float calculateMaxAngle(Lense lense){
 	vec3 focalPoint = (-lense.focalLength)*lense.normal + lense.center;
