@@ -1,4 +1,7 @@
 #include <iostream>
+#include <string>
+#include <sstream>
+
 #include <glm/glm.hpp>
 //#include </Users/galgazur/Downloads/CgLab1/glm/glm/glm.hpp>
 #include <SDL.h>
@@ -30,6 +33,7 @@ struct Lense
 	vec3 normal;
 	float focalLength;
 	float refractiveIndex;
+	int index;
 };
 
 struct LenseIntersection
@@ -39,17 +43,23 @@ struct LenseIntersection
 	float distance;
 };
 
+struct LenseNoiseMap
+{
+	float maxangle;
+	vector<vector<vec3>> noisematrix;
+};
+
 // ----------------------------------------------------------------------------
 // GLOBAL VARIABLES
 
-const int SCREEN_WIDTH = 100;
-const int SCREEN_HEIGHT = 100;
+const int SCREEN_WIDTH = 400;
+const int SCREEN_HEIGHT = 400;
 SDL_Surface* screen;
 int t;
 float PI = 3.14159f;
 
 float focalLength = SCREEN_HEIGHT / 2;
-vec3 cameraPos(0, 0, -2.f);
+vec3 cameraPos(0, 0, -2.8);
 vector<Triangle> triangles;
 mat3 R;
 float yaw;
@@ -58,14 +68,25 @@ vec3 lightPos(0, -0.5, -0.7);
 vec3 lightColor = 14.f * vec3(1, 1, 1);
 vec3 indirectLight = 0.5f*vec3(1, 1, 1);
 
+float focals1[] = { 0.001, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.3, 2.2, 2.1, 2.0, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
+
+
+float focals2[] = { 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.3, 2.2, 2.1, 2.0, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0 };
+
 vector<Lense> lenses;
-vec3 lenseCenterStart = vec3(0, 0, -1.f);
+vector<LenseNoiseMap> lensenoises;
+
+vec3 lenseCenterStart = vec3(0, 0, -1.5f);
 float defaultRefractiveIndex = 1.f;
+
+float maxangle;
+int noisecells = 150;
 
 // ----------------------------------------------------------------------------
 // FUNCTIONS
 
 void Update();
+void Update2(int index);
 void CalculateRotation();
 void Draw();
 bool ClosestIntersection(vec3 start, vec3 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
@@ -80,8 +101,9 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 void calculateReflection(vec3 dirIn, vec3 lensePoint, Lense lense, vec3& dirOut);
 void findPerpendicular(vec3 aVector, vec3& perpendicularVector);
 vec3 rotateVector(vec3 vector, float pitch, float yaw);
-
-
+void SetupLenseNoises(vector<Lense> lenses);
+vec3 calculateNoise(int lenseindex, float anglex, float angley);
+float calculateMaxAngle(Lense lense);
 // ----------------------------------------------------------------------------
 // CODE
 
@@ -116,15 +138,55 @@ int main(int argc, char* argv[])
 	LoadTestModel(triangles);
 
 	SetupLenses(lenseCenterStart);
-
-	while (NoQuitMessageSDL())
-	{
-		Update();
+	//for (int xcv = 0; xcv<200; xcv++) {
+	for (int pic = 199; pic<200; pic++) {
+		SetupLenseNoises(lenses);
+		Update2(pic);
 		Draw();
-	}
 
-	SDL_SaveBMP(screen, "screenshot.bmp");
+		const char * filename;// = "'~/Desktop/lense_screenshot";
+
+		std::stringstream sstm;
+		sstm << "C:\\Users\\erikr_000\\Documents\\Visual Studio 2013\\Projects\\dgi_project\\dgi_project\\screen" << pic << "-" << ".bmp";
+		std:string sstmstr = sstm.str();
+		filename = sstmstr.c_str();
+
+		cout << SDL_SaveBMP(screen, filename) << ":" << pic << "%  " << filename << "\n";
+		Update2(pic);
+	}
+	//}
+	//	while (NoQuitMessageSDL())
+	//	{
+	//		Update();
+	//		Draw();
+	//	}
+
+	//SDL_SaveBMP(screen, "screenshot.bmp");
+
+	cout << "Rendering complete. 100 pictures generated.";
 	return 0;
+}
+
+void Update2(int index){
+	int t2 = SDL_GetTicks();
+	float dt = float(t2 - t);
+	t = t2;
+	cout << "Render time: " << dt << " ms." << endl;
+	cout << "A 200pic movie will render in: " << 200 * (dt / 60000) << " minutes" << endl;
+	if (index<100){
+		lenses[0].focalLength = focals1[index];
+		lenses[1].focalLength = focals2[index];
+	}
+	else if ((index >= 100) && (index<199)){
+		float percent = ((float)index - 100.f) / 100.f;
+
+		lenses[0].center = glm::vec3(glm::sin(2.f*PI*percent)*0.5, glm::cos(2.f*PI*percent)*0.5, -1.5f);
+		lenses[1].center = lenses[0].center;
+	}
+	if (index == 100){
+		lenses[0].focalLength = 2.0f;
+		lenses[1].focalLength = 2.0f;
+	}
 }
 
 void Update()
@@ -349,17 +411,59 @@ void SetupLenses(vec3 center) {
 	lense.center = center;
 	lense.radius = 0.7f;
 	lense.normal = glm::normalize(vec3(0, 0, -1));
-	lense.focalLength = 2.f;
+	lense.focalLength = 4.f;
 	lense.refractiveIndex = 1.5f;
+	lense.index = 0;
 	lenses[0] = lense;
 
 	lense.center = center;
 	lense.radius = 0.7f;
 	lense.normal = glm::normalize(vec3(0, 0, 1));
-	lense.focalLength = 1.f;
+	lense.focalLength = 3.f;
 	lense.refractiveIndex = 1.5f;
+	lense.index = 1;
 	lenses[1] = lense;
 }
+
+float getSign(float number){
+	if (number>0){
+		return 1;
+	}
+	else{
+		return -1;
+	}
+}
+
+void SetupLenseNoises(vector<Lense> lenses){
+	lensenoises = vector<LenseNoiseMap>(2);
+	float maxnoise = 9.8;
+	float minimum = 0.2;
+	float intmax = (float)INT_MAX;
+	srand(time(NULL));
+	for (int i = 0; i<lenses.size(); i++) {
+		LenseNoiseMap noise;
+		noise.maxangle = calculateMaxAngle(lenses[i]);
+		noise.noisematrix = vector<vector<vec3>>(noisecells);
+
+		for (int y = 0; y<noisecells; y++) {
+			noise.noisematrix[y] = vector<vec3>(noisecells);
+			for (int x = 0; x<noisecells; x++) {
+				float rand1sign = getSign((float)(2 * (float)rand() / (float)intmax) - 1);
+				float rand2sign = getSign((float)(2 * (float)rand() / (float)intmax) - 1);
+				float rand3sign = getSign((float)(2 * (float)rand() / (float)intmax) - 1);
+				float rand1 = (float)rand();
+				float rand2 = (float)rand();
+				float rand3 = (float)rand();
+				noise.noisematrix[y][x] = vec3(((rand1 / intmax) + minimum)*maxnoise*rand1sign, ((rand2 / intmax) + minimum)*maxnoise*rand2sign, ((rand3 / intmax) + minimum)*maxnoise*rand3sign);
+				//                cout << noise.noisematrix[y][x].x << "," << noise.noisematrix[y][x].y << "," << noise.noisematrix[y][x].z << "\n";
+			}
+			//            cout << "\n";
+		}
+		lensenoises[i] = noise;
+	}
+}
+
+
 
 bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection, int previousIndex) {
 	if (lenses.size() <= 0) {
@@ -402,6 +506,11 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection, int 
 
 			}
 
+			if (d1<0){
+				d1 = d2;
+				d2 = INT_MAX;
+			}
+
 			vec3 intersection1 = start + d1*dir;
 			vec3 intersection2 = start + d2*dir;
 
@@ -422,16 +531,11 @@ bool IntersectsLense(vec3 start, vec3 dir, LenseIntersection& intersection, int 
 	return false;
 }
 
-/*
-Calculates the refraction of the ray that is being traced. Calculates both the refraction that happens when the ray hits the lens 
-aswell as when it exits.
-*/
 void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& lensePointOut, vec3& dirOut) {
 	vec3 insideRefractionDir;
 	Lense lense = lenses[lenseIndex];
 	calculateRefractionVector(lense, dirIn, lensePointIn, defaultRefractiveIndex, lense.refractiveIndex, insideRefractionDir);
 
-	//The intersection when the ray exits the lense
 	LenseIntersection outIntersection;
 	if (IntersectsLense(lensePointIn, insideRefractionDir, outIntersection, lenseIndex)) {
 		Lense outLense = lenses[outIntersection.lenseIndex];
@@ -444,9 +548,6 @@ void calculateRefraction(vec3 dirIn, vec3 lensePointIn, int lenseIndex, vec3& le
 	}
 }
 
-/*
-Calcuates a vector that describes the ray when it has hit the lense at the point 'pointIn'. 
-*/
 void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float mediumIn, float mediumOut, vec3& dirOut) {
 	//finding normal for the point on the lense where the ray hits
 	vec3 focalPoint = (-lense.focalLength)*lense.normal + lense.center;
@@ -487,14 +588,18 @@ void calculateRefractionVector(Lense lense, vec3 dirIn, vec3 pointIn, float medi
 	//	vec3 pitchedVector = vec3(dirIn.x, (dirIn.y * glm::cos(pitch)) + (dirIn.x * glm::sin(pitch)), (dirIn.z * glm::cos(pitch)) - (dirIn.x * glm::sin(pitch)));
 	//	vec3 yawedVector = vec3((pitchedVector.x * glm::cos(yaw)) - (pitchedVector.z * glm::sin(yaw)), pitchedVector.y, (pitchedVector.z * glm::cos(yaw)) - (pitchedVector.x * glm::sin(yaw)));
 
+	vec3 noise = calculateNoise(lense.index, glm::atan(normalVector.y / normalVector.z), glm::atan(normalVector.x / normalVector.z));
+
 	vec3 rotatedVector = rotateVector(dirIn, pitch2 - pitch1, yaw1 - yaw2);
 
-	dirOut = rotatedVector;
+	//cout << "noise1: " << rotatedVector.x << "," << rotatedVector.y << "," << rotatedVector.z << "\n";
+
+	dirOut = glm::normalize(rotatedVector) + noise;
+
+	//    dirOut = dirIn;
+	//cout << "noise2: " << dirOut.x << "," << dirOut.y << "," << dirOut.z << "\n";
 }
 
-/*
-Rotates the 'vector' as specified by 'pith' and 'yaw'. Returnes the rotated vector.
-*/
 vec3 rotateVector(vec3 vector, float pitch, float yaw) {
 	mat3 matPitch = mat3(vec3(1, 0, 0), vec3(0, cos(pitch), -sin(pitch)), vec3(0, sin(pitch), cos(pitch)));
 	mat3 matYaw = mat3(vec3(cos(yaw), 0, sin(yaw)), vec3(0, 1, 0), vec3(-sin(yaw), 0, cos(yaw)));
@@ -502,3 +607,66 @@ vec3 rotateVector(vec3 vector, float pitch, float yaw) {
 	vec3 rotated = mat * vector;
 	return rotated;
 }
+
+void calculateReflection(vec3 dirIn, vec3 lensePoint, vec3& dirOut) {
+	//TODO
+}
+
+float calculateMaxAngle(Lense lense){
+	vec3 focalPoint = (-lense.focalLength)*lense.normal + lense.center;
+	vec3 perpendicular;
+
+	findPerpendicular(lense.normal, perpendicular);
+	vec3 lensenormal = lense.normal;
+	vec3 pointnormal = glm::normalize(perpendicular*lense.radius - focalPoint);
+
+	return glm::acos(glm::dot(lensenormal, pointnormal) / (glm::length(lensenormal)*glm::length(pointnormal)));
+}
+
+vec3 calculateNoise(int lenseindex, float anglex, float angley){
+
+
+
+	float distanceconstant = 1;
+	float maxangle = lensenoises[lenseindex].maxangle;
+
+	float interval = glm::abs(maxangle) * 2;
+	float absanglex = maxangle + anglex;
+	float absangley = maxangle + angley;
+
+	float xquota = absanglex / interval;
+	float yquota = absangley / interval;
+
+	float xval = xquota*(noisecells - 1);
+	float yval = yquota*(noisecells - 1);
+
+	if (lenseindex == 0){
+		//cout << xval << "," << yval << "\n";
+		if ((xval>150) || (xval<0) || (yval>150) || (yval<0)){
+			cout << "?????\n";
+		}
+	}
+	vec3 noisesum = vec3(0, 0, 0);
+
+	for (int x = 0; x<noisecells; x++){
+		for (int y = 0; y<noisecells; y++) {
+
+
+
+			float ydistance = glm::abs(y - yval);
+			float xdistance = glm::abs(x - xval);
+			float distance = glm::sqrt((xdistance*xdistance) + (ydistance*ydistance));
+
+			float quota = distanceconstant / (distance*distance*distance*distance);
+			noisesum = noisesum + (lensenoises[lenseindex].noisematrix[x][y] * quota);
+		}
+	}
+	if (lenseindex == 1){
+		//cout << yquota << "\n";
+	}
+	noisesum = glm::normalize(noisesum) / 100.f;
+	//cout << "(" << noisesum.x << ", " << noisesum.y << ", " << noisesum.z << ")\n";
+
+	return noisesum;
+}
+
